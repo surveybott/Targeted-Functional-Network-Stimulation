@@ -14,16 +14,16 @@ end
 RefCifti.data=[]; % remove data, not needed
 
 % load midthickness surfaces 
-LH = gifti(MidthickSurfs{1});
-RH = gifti(MidthickSurfs{2});
+LH_gii = gifti(MidthickSurfs{1});
+RH_gii = gifti(MidthickSurfs{2});
 
 % find cortical vertices on surface cortex (not medial wall)
-LH_idx = RefCifti.brainstructure(1:length(LH.vertices))~=-1;
-RH_idx = RefCifti.brainstructure((length(LH.vertices)+1):(length(LH.vertices)+length(RH.vertices)))~=-1;
+LH_idx = RefCifti.brainstructure(1:length(LH_gii.vertices))~=-1;
+RH_idx = RefCifti.brainstructure((length(LH_gii.vertices)+1):(length(LH_gii.vertices)+length(RH_gii.vertices)))~=-1;
 
 % preallocate "reference verts"
-LH_verts=1:length(LH.vertices);
-RH_verts=1:length(RH.vertices);
+LH_verts=1:length(LH_gii.vertices);
+RH_verts=1:length(RH_gii.vertices);
 
 % cortical vertices only
 LH_verts=LH_verts(LH_idx);
@@ -32,6 +32,7 @@ RH_verts=RH_verts(RH_idx);
 % start parpool;
 pool = parpool('local',nThreads);
 
+LH = [];
 % sweep through vertices
 parfor i = 1:length(LH_verts)
     
@@ -42,10 +43,10 @@ parfor i = 1:length(LH_verts)
     LH(:,i) = temp.cdata(LH_idx); % log distances
         
 end
-
 % convert to uint8
 LH = uint8(LH);
 
+RH = [];
 % sweep through vertices
 parfor i = 1:length(RH_verts)
     
@@ -73,7 +74,7 @@ Bottom = [ones(length(RH),length(LH))*999 RH]; % dummy lh & rh
 D = uint8([Top;Bottom]); % combine hemispheres; cortical surface only so far 
 
 % extract coordinates for all cortical vertices 
-SurfaceCoords=[LH.vertices; RH.vertices]; % combine hemipsheres 
+SurfaceCoords=[LH_gii.vertices; RH_gii.vertices]; % combine hemipsheres 
 SurfaceIndex = RefCifti.brainstructure > 0 & RefCifti.brainstructure < 3;
 SurfaceIndex = SurfaceIndex(1:size(SurfaceCoords,1));
 SurfaceCoords = SurfaceCoords(SurfaceIndex,:);
