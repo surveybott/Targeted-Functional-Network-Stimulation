@@ -4,8 +4,11 @@ function [Output] = regress_cortical_signals(Input,DistanceMatrix,Distance)
 nCorticalVertices = nnz(Input.brainstructure==1) + nnz(Input.brainstructure==2);
 
 % load distance matrix;
-D = smartload(DistanceMatrix);
-
+if ischar(DistanceMatrix)
+	D = smartload(DistanceMatrix);
+else
+	D = DistanceMatrix;
+end
 % index of subcortical voxels
 SubcortVoxels = (nCorticalVertices+1):size(D,1);
 

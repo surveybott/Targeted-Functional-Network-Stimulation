@@ -1,13 +1,13 @@
 function pfm(C,DistanceMatrix,OutDir,Densities,NumberReps,MinDistance,BadVerts,Structures,NumberCores)
 % cjl; cjl2007@med.cornell.edu;
-rng(44); % for reproducibility.
+%rng(44); % for reproducibility.
 
 % define "resource" directories;
-ResourceDir = '/home/charleslynch/MultiEchofMRI-Pipeline/res0urces';
-addpath(genpath(ResourceDir));
+%ResourceDir = '/home/charleslynch/MultiEchofMRI-Pipeline/res0urces';
+%addpath(genpath(ResourceDir));
 
 % define the infomap binary location;
-InfoMap = '/home/charleslynch/miniconda3/bin/infomap';
+InfoMap = '/arc/project/st-fidelvil-1/software/envs/tedana/bin/infomap'
 
 % define a list of regions 
 % to be considered in the
@@ -38,7 +38,11 @@ GoodVerts(ismember(GoodVerts,BadVerts)) = [];
 
 % load and trim
 % the distance matrix;
-D = smartload(DistanceMatrix);
+if ischar(DistanceMatrix)
+	D = smartload(DistanceMatrix);
+else
+	D = DistanceMatrix;
+end
 D((nCorticalVertices + 1):end,(nCorticalVertices + 1):end) = 0; % note: this will ensure that subcortical-subcortical edges are set to zero;
 D = D(GoodVerts,GoodVerts);
 
