@@ -1,4 +1,4 @@
-function pfm(C,DistanceMatrix,OutDir,Densities,NumberReps,MinDistance,BadVerts,Structures,NumberCores)
+function pfm(C,DistanceMatrix,OutDir,Densities,NumberReps,MinDistance,BadVerts,Structures,parallel)
 % cjl; cjl2007@med.cornell.edu;
 %rng(44); % for reproducibility.
 
@@ -106,11 +106,17 @@ clear m
 
 % only if multiple 
 % workers are requested
-if NumberCores > 1
+if iscell(parallel) && numel(parallel) > 1
+    pc = parallel{1};
+    cores = parallel{2};
+else
+    pc = 'local';
+    cores = parallel;
+end
+if cores > 1
     
     % start a parpool;
-    pool = parpool('local',...
-    NumberCores);
+    pool = parpool(pc, cores);
     
     % sweep through the densities;
     parfor d = 1:length(Densities)

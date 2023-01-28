@@ -1,4 +1,4 @@
-function make_distance_matrix(RefCifti,MidthickSurfs,OutDir,nThreads)
+function make_distance_matrix(RefCifti,MidthickSurfs,OutDir,parallel)
 % cjl2007@med.cornell.edu; 
 
 try % make tmp directory
@@ -30,6 +30,14 @@ LH_verts=LH_verts(LH_idx);
 RH_verts=RH_verts(RH_idx);
 
 % start parpool;
+if numel(parallel) > 1
+    pc = parallel{1};
+    cores = parallel{2};
+else
+    pc = 'local';
+    cores = parallel;
+
+end
 pool = parpool('local',nThreads);
 
 LH = [];

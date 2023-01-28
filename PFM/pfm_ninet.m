@@ -1,13 +1,15 @@
 function pfm_ninet(sub,varargin)
 % inputs
+tmpDir = getenv('TMPDIR');
 p = inputParser;
 p.addRequired('sub');
 p.addParameter('derivativeDir','/scratch/st-fidelvil-1/LeRNIT/bids/derivatives');
 p.addParameter('workingDir','/scratch/st-fidelvil-1/LeRNIT/working/pfm/');
 p.addParameter('softwareDir','/arc/project/st-fidelvil-1/software');
-p.addParameter('funcSuffix','desc-optcomDenoised_bold.dtseries.nii')
+p.addParameter('funcSuffix','desc-optcomDenoised_bold*.nii')
 p.addParameter('distMatrix','/arc/project/st-fidelvil-1/software/Targeted-Functional-Network-Stimulation/PFM/DistanceMatrix.mat')
-p.parse(varargin{:});
+p.addParameter('clusterDir',tmpDir);
+p.parse(sub,varargin{:});
 inputs = p.Results;
 
 % add code
@@ -15,20 +17,25 @@ code = {'Targeted-Functional-Network-Stimulation', 'MSCcodebase'};
 for i=1:numel(code)
     addpath(genpath(fullfile(inputs.softwareDir,code{i})));
 end
+% setup parallel
 if ~exist('cores','var')
     cores = feature('numcores') - 1;
 end
-
+pc = parcluster;
+if ~isempty(inputs.clusterDir)
+    pc.JobStorageLocation = inputs.clusterDir;
+end
+warning('off','stats:regress:RankDefDesignMat');
 % setup data/paths/ get sessions
 sessions = dir(fullfile(inputs.derivativeDir,['sub-' sub],'ses-*'));
-ses = {sessions.name};
+ses = regexprep({sessions.name},'ses-','');
 for i=1:numel(ses)
-    tmpDir = fullfile(workingDir,sprintf('sub-%s_ses-%s',sub,ses{i}));
-    outDir = fullfile(derivativeDir,['sub-' sub],['ses-' ses{i}],'func');
+    tmpDir = fullfile(inputs.workingDir,sprintf('sub-%s_ses-%s',sub,ses{i}));
+    outDir = fullfile(inputs.derivativeDir,['sub-' sub],['ses-' ses{i}],'func');
     if ~isfolder(tmpDir)
         mkdir(tmpDir);
     end
-    fprint('sub-%s_ses-%s\n',sub,ses{i});
+    fprintf('sub-%s_ses-%s\n',sub,ses{i});
 
     % ciftis
     tmp = dir(fullfile(outDir,['*' inputs.funcSuffix]));
@@ -39,7 +46,7 @@ for i=1:numel(ses)
     % create/load distance matrix
     distMat = inputs.distMatrix;
     if ~exist(distMat,'file')
-        make_distance_matrix(cifti{1},surf,tmpDir,cores);
+        make_distance_matrix(cifti{1},surf,tmpDir,{pc cores});
         distMat = fullfile(tmpDir,'DistanceMatrix.mat');
     end
 
@@ -91,7 +98,7 @@ for i=1:numel(ses)
         'CORTEX_RIGHT','CEREBELLUM_RIGHT','ACCUMBENS_RIGHT','CAUDATE_RIGHT','PALLIDUM_RIGHT','PUTAMEN_RIGHT','THALAMUS_RIGHT','HIPPOCAMPUS_RIGHT','AMYGDALA_RIGHT','ACCUMBENS_RIGHT'};
     MinDistance = 10;
     BadVerts = [];
-    NumberCores = cores;
+    NumberCores = {pc cores};
     pfm(c,distMat,tmpDir,Densities,NumberReps,MinDistance,BadVerts,Structures,NumberCores)
     spatial_filtering(fullfile(tmpDir,'Bipartite_PhysicalCommunities.dtseries.nii'),outDir,sprintf('sub-%s_ses-%s_Bipartite_PhysicalCommunities_desc-SpatialFiltering.dtseries.nii',sub,ses{i}),surf,20,20);
 end
