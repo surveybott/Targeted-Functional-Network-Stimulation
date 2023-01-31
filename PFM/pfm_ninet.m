@@ -3,15 +3,22 @@ function pfm_ninet(sub,varargin)
 tmpDir = getenv('TMPDIR');
 p = inputParser;
 p.addRequired('sub');
+p.addParameter('ses',[]);
 p.addParameter('derivativeDir','/scratch/st-fidelvil-1/LeRNIT/bids/derivatives');
 p.addParameter('workingDir','/scratch/st-fidelvil-1/LeRNIT/working/pfm/');
 p.addParameter('softwareDir','/arc/project/st-fidelvil-1/software');
 p.addParameter('funcSuffix','desc-optcomDenoised_bold*.nii')
-p.addParameter('distMatrix','/arc/project/st-fidelvil-1/software/Targeted-Functional-Network-Stimulation/PFM/DistanceMatrix.mat')
+p.addParameter('distMatrix','/arc/project/st-fidelvil-1/software/Targeted-Functional-Network-Stimulation/PFM/DistanceMatrix.mat');
+p.addParameter('spatialThresh',[20 20],@(x) isnumeric(x) && numel(x)==2); % [CortexThreshold, SubcortexThreshold] for spatial_filtering.m
 p.addParameter('clusterDir',tmpDir);
 p.parse(sub,varargin{:});
 inputs = p.Results;
-
+if ~isempty(inputs.ses) 
+    if ischar(inputs.ses)
+        inputs.ses = {inputs.ses};
+    end
+    inputs.ses = regexprep(inputs.ses,'ses-','');
+end
 % add code
 code = {'Targeted-Functional-Network-Stimulation', 'MSCcodebase'};
 for i=1:numel(code)
@@ -29,6 +36,12 @@ warning('off','stats:regress:RankDefDesignMat');
 % setup data/paths/ get sessions
 sessions = dir(fullfile(inputs.derivativeDir,['sub-' sub],'ses-*'));
 ses = regexprep({sessions.name},'ses-','');
+if ~isempty(inputs.ses)
+    ses = ses(ismember(ses,inputs.ses));
+    if isempty(ses)
+        error('No sessioins found');
+    end
+end
 for i=1:numel(ses)
     tmpDir = fullfile(inputs.workingDir,sprintf('sub-%s_ses-%s',sub,ses{i}));
     outDir = fullfile(inputs.derivativeDir,['sub-' sub],['ses-' ses{i}],'func');
@@ -100,7 +113,8 @@ for i=1:numel(ses)
     BadVerts = [];
     NumberCores = {pc cores};
     pfm(c,distMat,tmpDir,Densities,NumberReps,MinDistance,BadVerts,Structures,NumberCores)
-    spatial_filtering(fullfile(tmpDir,'Bipartite_PhysicalCommunities.dtseries.nii'),outDir,sprintf('sub-%s_ses-%s_Bipartite_PhysicalCommunities_desc-SpatialFiltering.dtseries.nii',sub,ses{i}),surf,20,20);
+    spatial_filtering(fullfile(tmpDir,'Bipartite_PhysicalCommunities.dtseries.nii'),outDir,sprintf('sub-%s_ses-%s_Bipartite_PhysicalCommunities_desc-SpatialFiltering.dtseries.nii',sub,ses{i}),...
+        surf,inputs.spatialThresh(1),inputs.spatialThresh(2));
 end
 
 end
