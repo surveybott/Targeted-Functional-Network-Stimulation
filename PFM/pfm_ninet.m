@@ -7,7 +7,8 @@ p.addParameter('ses',[]);
 p.addParameter('derivativeDir','/scratch/st-fidelvil-1/LeRNIT/bids/derivatives');
 p.addParameter('workingDir','/scratch/st-fidelvil-1/LeRNIT/working/pfm/');
 p.addParameter('softwareDir','/arc/project/st-fidelvil-1/software');
-p.addParameter('funcSuffix','desc-optcomDenoised_bold*.nii')
+p.addParameter('task','restME');
+p.addParameter('funcSuffix','desc-optcomDenoised_bold.dtseries.nii')
 p.addParameter('distMatrix','/arc/project/st-fidelvil-1/software/Targeted-Functional-Network-Stimulation/PFM/DistanceMatrix.mat');
 p.addParameter('spatialThresh',[20 20],@(x) isnumeric(x) && numel(x)==2); % [CortexThreshold, SubcortexThreshold] for spatial_filtering.m
 p.addParameter('clusterDir',tmpDir);
@@ -18,6 +19,12 @@ if ~isempty(inputs.ses)
         inputs.ses = {inputs.ses};
     end
     inputs.ses = regexprep(inputs.ses,'ses-','');
+end
+if ~isempty(inputs.task)
+    taskStr = sprintf('_task-%s',inputs.task);
+else
+    taskStr = '';
+    inputs.task = '';
 end
 % add code
 code = {'Targeted-Functional-Network-Stimulation', 'MSCcodebase'};
@@ -51,7 +58,7 @@ for i=1:numel(ses)
     fprintf('sub-%s_ses-%s\n',sub,ses{i});
 
     % ciftis
-    tmp = dir(fullfile(outDir,['*' inputs.funcSuffix]));
+    tmp = dir(fullfile(outDir,['*' taskStr '*' inputs.funcSuffix]));
     cifti = arrayfun(@(x) fullfile(x.folder,x.name),tmp,'UniformOutput',0);
     tmp = dir(fullfile(inputs.softwareDir,'/templateflow/tpl-fsLR/tpl-fsLR_den-32k_*_midthickness.surf.gii'));
     surf = arrayfun(@(x) fullfile(x.folder,x.name),tmp,'UniformOutput',0);
@@ -82,7 +89,8 @@ for i=1:numel(ses)
 
     % subcortical regression
     c = regress_cortical_signals(c, distMat, 20);
-    cifti_reg = fullfile(tmpDir,sprintf('sub-%s_ses-%s_task-restME_space-fsLR_den-91k_desc-optcomDenoisedRegressed_bold.dtseries.nii',sub,ses{i}));
+    cifti_reg = fullfile(tmpDir,sprintf('sub-%s_ses-%s%s_space-fsLR_den-91k_desc-optcomDenoisedRegressed_bold.dtseries.nii',sub,ses{i},taskStr));
+
     ft_write_cifti_mod(cifti_reg,c);
 
 
@@ -94,7 +102,7 @@ for i=1:numel(ses)
 
     % load concat/preprocessed cifti and FD
     c = ft_read_cifti_mod(cifti_smooth);
-    tsv = dir(sprintf('/scratch/st-fidelvil-1/LeRNIT/bids/derivatives/sub-%s/ses-%s/func/*task-restME_*desc-confounds_timeseries.tsv',sub,ses{i}));
+    tsv = dir(sprintf('/scratch/st-fidelvil-1/LeRNIT/bids/derivatives/sub-%s/ses-%s/func/*%s*desc-confounds_timeseries.tsv',sub,ses{i},taskStr));
     fd = [];
     for j=1:numel(tsv)
         t = tdfread(fullfile(tsv(j).folder,tsv(j).name));
@@ -113,7 +121,7 @@ for i=1:numel(ses)
     BadVerts = [];
     NumberCores = {pc cores};
     pfm(c,distMat,tmpDir,Densities,NumberReps,MinDistance,BadVerts,Structures,NumberCores)
-    spatial_filtering(fullfile(tmpDir,'Bipartite_PhysicalCommunities.dtseries.nii'),outDir,sprintf('sub-%s_ses-%s_Bipartite_PhysicalCommunities_desc-SpatialFiltering.dtseries.nii',sub,ses{i}),...
+    spatial_filtering(fullfile(tmpDir,'Bipartite_PhysicalCommunities.dtseries.nii'),outDir,sprintf('sub-%s_ses-%s%s_Bipartite_PhysicalCommunities_desc-SpatialFiltering.dtseries.nii',sub,ses{i},taskStr),...
         surf,inputs.spatialThresh(1),inputs.spatialThresh(2));
 end
 
