@@ -110,7 +110,7 @@ for i=1:numel(ses)
             fd(end+1) = str2double(t.framewise_displacement(k,:));
         end
     end
-    c.data(:,fd<0.3) = []; % remove high motion volumes
+    c.data(:,fd>0.3) = []; % remove high motion volumes
 
     % run pfm and filter
     Densities=flip([0.0001 0.0002 0.0005 0.001 0.002 0.005 0.01 0.02 0.05]);
