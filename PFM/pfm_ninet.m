@@ -14,7 +14,7 @@ p.addParameter('spatialThresh',[20 20],@(x) isnumeric(x) && numel(x)==2); % [Cor
 p.addParameter('clusterDir',tmpDir);
 p.parse(sub,varargin{:});
 inputs = p.Results;
-if ~isempty(inputs.ses) 
+if ~isempty(inputs.ses)
     if ischar(inputs.ses)
         inputs.ses = {inputs.ses};
     end
@@ -50,7 +50,7 @@ if ~isempty(inputs.ses)
     end
 end
 for i=1:numel(ses)
-    tmpDir = fullfile(inputs.workingDir,sprintf('sub-%s_ses-%s',sub,ses{i}));
+    tmpDir = fullfile(inputs.workingDir,sprintf('sub-%s_ses-%s%s',sub,ses{i},taskStr));
     outDir = fullfile(inputs.derivativeDir,['sub-' sub],['ses-' ses{i}],'func');
     if ~isfolder(tmpDir)
         mkdir(tmpDir);
@@ -73,6 +73,7 @@ for i=1:numel(ses)
     % load cifti, do global signal regression, concatenate
     c_concat = [];
     for j=1:numel(cifti)
+        fprintf('Loading %s\n',cifti{i})
         c = ft_read_cifti_mod(cifti{j});
         % GSR
         cortex_idx = find(c.brainstructure == 1 | c.brainstructure == 2);
